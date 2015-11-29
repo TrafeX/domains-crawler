@@ -35,3 +35,23 @@ Login to Redis
 (Re)build the docker containers
 -------------------------------
 `sudo docker-compose build`
+
+
+TODO
+====
+
+- Fetch X to be indexed domains from Redis
+- Feed to async queue with X workers
+- Wait for queue to be (almost) empty
+- Repeat
+
+Development
+===========
+
+- Install npm packages locally in crawler/:
+`npm install`
+- Add the following line to the crawler node in docker-compose.yml:
+`
+    volumes:
+        - ./crawler/:src/
+`

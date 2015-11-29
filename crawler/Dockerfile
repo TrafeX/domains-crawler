@@ -5,7 +5,7 @@ MAINTAINER Tim de Pater
 # Install Node.js and other dependencies
 RUN apt-get update && \
     apt-get -y install curl && \
-    curl -sL https://deb.nodesource.com/setup_0.12  | bash - && \
+    curl -sL https://deb.nodesource.com/setup_0.12 | bash - && \
     apt-get -y install python build-essential nodejs
 
 # Install nodemon
@@ -18,7 +18,6 @@ RUN mkdir -p /src && cp -a /tmp/node_modules /src/
 
 # Define working directory
 WORKDIR /src
-ADD . /src
 
 # Run app using nodemon
-CMD ["nodemon", "/src/crawler.js"]
+CMD nodemon /src/crawler.js

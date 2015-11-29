@@ -1,14 +1,14 @@
 {
   "name": "robots-crawler",
   "version": "1.0.0",
-  "main": "server.js",
+  "main": "robots.js",
   "repository": {
     "type": "git",
-    "url": "https://github.com/TrafeX/robots-crawler.git"
+    "url": "https://github.com/TrafeX/domains-crawler.git"
   },
   "dependencies": {
+    "elasticsearch": "^4.1.0",
     "log-timestamp": "^0.1.2",
-    "redis": "^0.12.1",
     "request": "^2.55.0"
   }
 }
