@@ -36,6 +36,7 @@ function indexDomain(domain) {
             uri: domain,
             time: true,
             followRedirect: false,
+            timeout: 1000
         }, function (error, response, body) {
             if (!error) {
                 console.log(response.statusCode + ': ' + response.request.uri.href + ' (' + response.elapsedTime + 'ms)');

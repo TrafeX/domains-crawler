@@ -22,7 +22,7 @@ Start
 
 Scale
 -----
-`sudo docker-compose scale node=4`
+`sudo docker-compose scale crawler=4`
 
 See the output
 --------------
@@ -30,7 +30,7 @@ See the output
 
 Login to Redis
 --------------
-`sudo docker run -it --link domainscrawler_redis_1:redis --rm redis sh -c 'exec redis-cli -h "$REDIS_PORT_6379_TCP_ADDR" -p"$REDIS_PORT_6379_TCP_PORT"'`
+`sudo docker run -it --link domainscrawler_redis_1:redis --rm redis sh -c 'exec redis-cli -h "$REDIS_PORT_6379_TCP_ADDR" -p "$REDIS_PORT_6379_TCP_PORT"'`
 
 (Re)build the docker containers
 -------------------------------
@@ -44,6 +44,15 @@ TODO
 - Feed to async queue with X workers
 - Wait for queue to be (almost) empty
 - Repeat
+
+
+RabbitMQ
+^^^^^^^^
+Workers:
+
+- Fetch body, response code, response time from URL
+
+
 
 Development
 ===========

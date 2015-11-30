@@ -8,7 +8,7 @@ var esClient = new elasticsearch.Client({
 });
 require('log-timestamp');
 function indexRobots(domain) {
-    var url = domain + "robots.txt";
+    var url = domain + "/robots.txt";
     console.log('Fetching ' + url);
     request({
         method: 'GET',
@@ -26,6 +26,7 @@ function indexRobots(domain) {
         console.log(statusCode + ': ' + domain + ' (' + elapsedTime + 'ms)');
 
         // @todo: parse robots.txt
+        // @todo: only add body when statuscode == 200
         esClient.update({
             index: 'domains',
             type: 'domain',
@@ -35,6 +36,7 @@ function indexRobots(domain) {
                     robots: {
                         responseTime: elapsedTime,
                         responseCode: statusCode,
+                        indexDate: new Date().toISOString(),
                         body: body,
                         indexed: true
                     }
