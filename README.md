@@ -40,27 +40,9 @@ Login to Redis
 TODO
 ====
 
-- Fetch X to be indexed domains from Redis
-- Feed to async queue with X workers
-- Wait for queue to be (almost) empty
-- Repeat
 
+Domain > Fetch > Domain document & body > Crawler > Domain
 
-RabbitMQ
-^^^^^^^^
-Workers:
+- Fetcher: Request url, create document with response code & timing. Add body to queue.
+- Crawler: Fetch body from queue, search urls, add to queue & add foundurls to document.
 
-- Fetch body, response code, response time from URL
-
-
-
-Development
-===========
-
-- Install npm packages locally in crawler/:
-`npm install`
-- Add the following line to the crawler node in docker-compose.yml:
-`
-    volumes:
-        - ./crawler/:src/
-`

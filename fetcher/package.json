@@ -1,7 +1,7 @@
 {
-  "name": "domains-crawler",
+  "name": "domains-crawler-fetcher",
   "version": "1.0.0",
-  "main": "crawler.js",
+  "main": "fetcher.js",
   "repository": {
     "type": "git",
     "url": "https://github.com/TrafeX/domains-crawler.git"

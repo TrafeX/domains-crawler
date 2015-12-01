@@ -4,21 +4,31 @@ crawler:
         - ./crawler/:/src/
     links:
         - elasticsearch
-        - redis
-robots:
-    build: ./robots
+        - rabbitmq
+
+fetcher:
+    build: ./fetcher
     volumes:
-        - ./robots/:/src/
+        - ./fetcher/:/src/
     links:
         - elasticsearch
+        - rabbitmq
 
-redis:
-    image: redis
+#robots:
+#    build: ./robots
+#    volumes:
+#        - ./robots/:/src/
+#    links:
+#        - elasticsearch
+
+rabbitmq:
+    image: rabbitmq:3-management
     ports:
-        - "6379"
+        - "15672:15672"
+        - "5672:5672"
 
 elasticsearch:
     image: elasticsearch
     ports:
-        - "9200"
+        - "9200:9200"
         - "9300"
