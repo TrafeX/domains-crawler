@@ -11,52 +11,47 @@ var rabbitMqContext;
 // process.setMaxListeners(100);
 
 function indexDomain(domain, callback) {
-    esClient.index({
-        index: 'domains',
-        type: 'domain',
-        id: domain,
-        body: {
-            indexDate: new Date().toISOString(),
-            indexed: true
+    // @todo: Check for duplicates
+    request({
+        method: 'GET',
+        uri: domain,
+        time: true,
+        followRedirect: false,
+        timeout: 1000
+    }, function (error, response, body) {
+        if (!error) {
+            console.log(response.statusCode + ': ' + response.request.uri.href + ' (' + response.elapsedTime + 'ms)');
         }
-    }, function (err, res) {
-        if (err) {
-            console.log('ES error: ' + err);
-            return;
-        }
-
-        request({
-            method: 'GET',
-            uri: domain,
-            time: true,
-            followRedirect: false,
-            timeout: 1000
-        }, function (error, response, body) {
-            if (!error) {
-                console.log(response.statusCode + ': ' + response.request.uri.href + ' (' + response.elapsedTime + 'ms)');
-            }
-            if (!error && response.statusCode == 200) {
-
-                esClient.update({
-                    index: 'domains',
-                    type: 'domain',
-                    id: domain,
-                    body: {
-                        doc: {
-                            responseTime: response.elapsedTime,
-                            responseCode: response.statusCode,
-                            realHref: response.request.uri.href,
-                        }
+        if (!error && response.statusCode == 200) {
+            esClient.index({
+                index: 'domains',
+                type: 'domain',
+                id: domain,
+                body: {
+                    doc: {
+                        responseTime: response.elapsedTime,
+                        responseCode: response.statusCode,
+                        realHref: response.request.uri.href,
+                        indexDate: new Date().toISOString(),
+                        indexed: true
                     }
-                });
-
-                var publisher = rabbitMqContext.socket('PUSH');
+                }
+            }, function (err, res) {
+                if (err) {
+                    console.log('ES error: ' + err);
+                    callback();
+                    return;
+                }
+                var publisher = rabbitMqContext.socket('PUSH', {persistent: 1});
                 publisher.connect('crawler', function () {
                     publisher.write(JSON.stringify({ domain: domain, body: body}), 'utf8');
+                    callback();
                 });
-            }
+            });
+
+        } else {
             callback();
-        });
+        }
     });
 }
 
@@ -70,7 +65,7 @@ function startWorker() {
 
     rabbitMqContext.on('ready', function() {
         console.log('RabbitMQ context is ready');
-        var worker = rabbitMqContext.socket('WORKER', {prefetch: 1});
+        var worker = rabbitMqContext.socket('WORKER', {prefetch: 1, persistent: 1});
         worker.connect('domains', function () {
             worker.on('data', function (payload) {
                 var data  = JSON.parse(payload);

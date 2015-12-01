@@ -1,6 +1,6 @@
 # Set the base image to Ubuntu
 FROM ubuntu:15.04
-MAINTAINER Tim de Pater
+MAINTAINER Tim de Pater <code@trafex.nl>
 
 # Install Node.js and other dependencies
 RUN apt-get update && \

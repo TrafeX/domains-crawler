@@ -30,17 +30,23 @@ function crawlDomain(domain, body, callback) {
                 urlsFound: foundUrls
             }
         }
-    });
+    }, function (err, res) {
 
-    var publisher = rabbitMqContext.socket('PUSH');
-
-    publisher.connect('domains', function () {
-        for (var id in domains) {
-            publisher.write(JSON.stringify({ domain: domains[id]}), 'utf8');
+        if (err) {
+            console.log('ES error: ' + err);
+            callback();
+            return;
         }
-    });
 
-    callback();
+        var publisher = rabbitMqContext.socket('PUSH', {persistent: 1});
+
+        publisher.connect('domains', function () {
+            for (var id in domains) {
+                publisher.write(JSON.stringify({ domain: domains[id]}), 'utf8');
+            }
+            callback();
+        });
+    });
 }
 
 function startWorker() {
@@ -53,7 +59,7 @@ function startWorker() {
 
     rabbitMqContext.on('ready', function() {
         console.log('RabbitMQ context is ready');
-        var worker = rabbitMqContext.socket('WORKER', {prefetch: 1});
+        var worker = rabbitMqContext.socket('WORKER', {prefetch: 1, persistent: 1});
         worker.connect('crawler', function () {
             worker.on('data', function (payload) {
                 var data  = JSON.parse(payload);
