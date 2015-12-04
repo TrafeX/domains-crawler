@@ -8,7 +8,7 @@ var esClient = new elasticsearch.Client({
 });
 var rabbitMqContext;
 
-function crawlDomain(domain, body, callback) {
+function crawlDomain(domain, body, responseTime, callback) {
     var regex = /(?:(?:ht|f)tp(?:s?)\:\/\/)(?:(?:[-\w]+\.)+(?:com|org|net|gov|mil|biz|info|mobi|name|aero|jobs|museum|travel|[a-z]{2}))/gi;
     var result = body.match(regex);
 
@@ -21,12 +21,17 @@ function crawlDomain(domain, body, callback) {
     }
 
     console.log('Found %s domains on %s', foundUrls, domain);
-    esClient.update({
+
+    // @todo: Check for duplicates
+    esClient.index({
         index: 'domains',
         type: 'domain',
         id: domain,
         body: {
             doc: {
+                responseTime: responseTime,
+                indexDate: new Date().toISOString(),
+                indexed: true,
                 urlsFound: foundUrls
             }
         }
@@ -63,7 +68,7 @@ function startWorker() {
         worker.connect('crawler', function () {
             worker.on('data', function (payload) {
                 var data  = JSON.parse(payload);
-                crawlDomain(data.domain, data.body, function() {
+                crawlDomain(data.domain, data.body, data.responseTime, function() {
                     worker.ack();
                 });
             });

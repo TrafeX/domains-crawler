@@ -11,7 +11,6 @@ var rabbitMqContext;
 // process.setMaxListeners(100);
 
 function indexDomain(domain, callback) {
-    // @todo: Check for duplicates
     request({
         method: 'GET',
         uri: domain,
@@ -23,30 +22,10 @@ function indexDomain(domain, callback) {
             console.log(response.statusCode + ': ' + response.request.uri.href + ' (' + response.elapsedTime + 'ms)');
         }
         if (!error && response.statusCode == 200) {
-            esClient.index({
-                index: 'domains',
-                type: 'domain',
-                id: domain,
-                body: {
-                    doc: {
-                        responseTime: response.elapsedTime,
-                        responseCode: response.statusCode,
-                        realHref: response.request.uri.href,
-                        indexDate: new Date().toISOString(),
-                        indexed: true
-                    }
-                }
-            }, function (err, res) {
-                if (err) {
-                    console.log('ES error: ' + err);
-                    callback();
-                    return;
-                }
-                var publisher = rabbitMqContext.socket('PUSH', {persistent: 1});
-                publisher.connect('crawler', function () {
-                    publisher.write(JSON.stringify({ domain: domain, body: body}), 'utf8');
-                    callback();
-                });
+            var publisher = rabbitMqContext.socket('PUSH', {persistent: 1});
+            publisher.connect('crawler', function () {
+                publisher.write(JSON.stringify({ domain: domain, responseTime: response.elapsedTime, body: body}), 'utf8');
+                callback();
             });
 
         } else {

@@ -14,13 +14,6 @@ fetcher:
         - elasticsearch
         - rabbitmq
 
-#robots:
-#    build: ./robots
-#    volumes:
-#        - ./robots/:/src/
-#    links:
-#        - elasticsearch
-
 rabbitmq:
     image: rabbitmq:3-management
     ports:
