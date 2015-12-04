@@ -1,109 +1,78 @@
 'use strict';
 
 var request = require('request');
-var redis = require('redis');
 var elasticsearch = require('elasticsearch');
 var esClient = new elasticsearch.Client({
     host: 'elasticsearch:9200',
     //    log: 'trace'
 });
-var redisClient = redis.createClient('6379', 'redis');
-require('log-timestamp');
+var rabbitMqContext;
 
-redisClient.on("error", function (err) {
-    console.log('Redis Error: ' + err);
-});
+function crawlDomain(domain, body, responseTime, callback) {
+    var regex = /(?:(?:ht|f)tp(?:s?)\:\/\/)(?:(?:[-\w]+\.)+(?:com|org|net|gov|mil|biz|info|mobi|name|aero|jobs|museum|travel|[a-z]{2}))/gi;
+    var result = body.match(regex);
 
-process.setMaxListeners(100);
+    var foundUrls = 0;
+    if (result) {
+        var domains = result.filter(function(elem, pos) {
+            return result.indexOf(elem) == pos;
+        });
+        foundUrls = domains.length
+    }
 
-function indexDomain(domain) {
+    console.log('Found %s domains on %s', foundUrls, domain);
+
+    // @todo: Check for duplicates
     esClient.index({
         index: 'domains',
         type: 'domain',
         id: domain,
         body: {
-            indexDate: new Date().toISOString(),
-            indexed: true
+            doc: {
+                responseTime: responseTime,
+                indexDate: new Date().toISOString(),
+                indexed: true,
+                urlsFound: foundUrls
+            }
         }
     }, function (err, res) {
+
         if (err) {
             console.log('ES error: ' + err);
+            callback();
             return;
         }
 
-        request({
-            method: 'GET',
-            uri: domain,
-            time: true,
-            followRedirect: false,
-            timeout: 1000
-        }, function (error, response, body) {
-            if (!error) {
-                console.log(response.statusCode + ': ' + response.request.uri.href + ' (' + response.elapsedTime + 'ms)');
+        var publisher = rabbitMqContext.socket('PUSH', {persistent: 1});
+
+        publisher.connect('domains', function () {
+            for (var id in domains) {
+                publisher.write(JSON.stringify({ domain: domains[id]}), 'utf8');
             }
-            if (!error && response.statusCode == 200) {
-                var regex = /(?:(?:ht|f)tp(?:s?)\:\/\/)(?:(?:[-\w]+\.)+(?:com|org|net|gov|mil|biz|info|mobi|name|aero|jobs|museum|travel|[a-z]{2}))/gi;
-                var result = body.match(regex);
-
-                var foundUrls = 0;
-                if (result) {
-                    var domains = result.filter(function(elem, pos) {
-                        return result.indexOf(elem) == pos;
-                    });
-                    foundUrls = domains.length
-                }
-
-                esClient.update({
-                    index: 'domains',
-                    type: 'domain',
-                    id: domain,
-                    body: {
-                        doc: {
-                            responseTime: response.elapsedTime,
-                            responseCode: response.statusCode,
-                            realHref: response.request.uri.href,
-                            urlsFound: foundUrls,
-                        }
-                    }
-                });
-
-                // @todo: var multi = redisClient.multi();
-
-                for (var id in domains) {
-                    addDomainToIndex(domains[id]);
-                }
-            }
-            fetchDomain();
+            callback();
         });
     });
 }
 
-function addDomainToIndex(domain) {
+function startWorker() {
+    rabbitMqContext = require('rabbit.js').createContext('amqp://rabbitmq');
 
-    redisClient.sismember('domains', domain, function (err, reply) {
-        if (err) {
-            console.log('Redis error: ' + err);
-            return;
-        }
-        if (reply === 0) {
-            redisClient.rpush('domainsToIndex', domain);
-            redisClient.sadd('domains', domain);
-        }
+    rabbitMqContext.on('error', function(error) {
+        console.log('Connection to RabbitMQ failed (%s), retrying in 2 seconds..', error);
+        setTimeout(startWorker, 2000);
     });
-}
 
-
-function fetchDomain() {
-    redisClient.lpop('domainsToIndex', function (err, reply) {
-        if (err) {
-            console.log('Error: ' + err);
-            return false;
-        }
-        if (reply) {
-            indexDomain(reply.toString());
-        } else {
-            indexDomain('http://www.nu.nl');
-        }
+    rabbitMqContext.on('ready', function() {
+        console.log('RabbitMQ context is ready');
+        var worker = rabbitMqContext.socket('WORKER', {prefetch: 1, persistent: 1});
+        worker.connect('crawler', function () {
+            worker.on('data', function (payload) {
+                var data  = JSON.parse(payload);
+                crawlDomain(data.domain, data.body, data.responseTime, function() {
+                    worker.ack();
+                });
+            });
+        });
     });
 }
 
@@ -116,7 +85,7 @@ function startCrawler() {
             setTimeout(startCrawler, 2000);
         } else {
             console.log('Starting crawler..');
-            fetchDomain();
+            startWorker();
         }
     });
 }

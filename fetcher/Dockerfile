@@ -20,4 +20,4 @@ RUN mkdir -p /src && cp -a /tmp/node_modules /src/
 WORKDIR /src
 
 # Run app using nodemon
-CMD nodemon /src/crawler.js
+CMD nodemon /src/fetcher.js
